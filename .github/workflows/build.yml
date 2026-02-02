@@ -3,7 +3,11 @@ name: Build
 on:
   push:
     branches:
+<<<<<<< HEAD
       - master
+=======
+      - develop
+>>>>>>> a4356ada041b26976b1f2ae73015a16900fb527b
 
 permissions:
   contents: read
