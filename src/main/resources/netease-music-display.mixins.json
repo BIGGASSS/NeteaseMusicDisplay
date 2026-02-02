@@ -1,0 +1,14 @@
+{
+	"required": true,
+	"package": "com.as9929.display.netease.mixin",
+	"compatibilityLevel": "JAVA_21",
+	"mixins": [
+		"InGameHudMixin"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	},
+	"overwrites": {
+		"requireAnnotations": true
+	}
+}

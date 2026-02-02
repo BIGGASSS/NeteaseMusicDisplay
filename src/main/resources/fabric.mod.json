@@ -1,0 +1,41 @@
+{
+	"schemaVersion": 1,
+	"id": "netease-music-display",
+	"version": "${version}",
+	"name": "netease-music-display",
+	"description": "In-game display of the current playing music.",
+	"authors": [
+		"BIGGASSS"
+	],
+	"contact": {
+		"homepage": "https://github.com/BIGGASSS/NeteaseMusicDisplay",
+		"sources": "https://github.com/BIGGASSS/NeteaseMusicDisplay"
+	},
+	"license": "Apache 2.0",
+	"icon": "assets/netease-music-display/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			{
+				"value": "com.as9929.display.netease.Neteasemusicdisplay",
+				"adapter": "kotlin"
+			}
+		],
+		"fabric-datagen": [
+			{
+				"value": "com.as9929.display.netease.NeteasemusicdisplayDataGenerator",
+				"adapter": "kotlin"
+			}
+		]
+	},
+	"mixins": [
+		"netease-music-display.mixins.json"
+	],
+	"depends": {
+		"fabricloader": ">=0.18.4",
+		"minecraft": "~1.21.10",
+		"java": ">=21",
+		"fabric-api": "*",
+		"fabric-language-kotlin": "*"
+	}
+}
