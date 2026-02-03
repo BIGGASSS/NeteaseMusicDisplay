@@ -4,45 +4,60 @@ import net.minecraft.client.MinecraftClient
 import net.minecraft.client.gui.DrawContext
 import net.minecraft.text.Text
 import java.awt.Color
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 object TextRender {
     private var scale = 1.0f
     private val color = Color(255, 255, 0, 255).rgb // White
-    private var cachedTitle: String = "No Music"
-    private var tickCounter = 0
+
+    @Volatile
+    private var cachedTitle: String? = null
+
+    // Create a single background thread to handle the heavy querying
+    private val executor = Executors.newSingleThreadScheduledExecutor { r ->
+        val t = Thread(r, "NeteaseMusicQueryThread")
+        t.isDaemon = true // Ensure thread closes when the game closes
+        t
+    }
+
+    init {
+        // Schedule the query to run every 1 second (initial delay 0)
+        executor.scheduleAtFixedRate({
+            try {
+                // This heavy work now happens off the main thread
+                val musicTitle = CloudMusicHelper.getCloudMusicTitle()
+                cachedTitle = musicTitle
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }, 0, 1, TimeUnit.SECONDS)
+    }
 
     fun onRender(context: DrawContext) {
-        if (CloudMusicHelper.getCloudMusicTitle() == null) return
-        tickCounter++
-        if (tickCounter >= 20) { // Update every 1 second (20 ticks)
-            tickCounter = 0
-            // Run in background thread if you notice lag, though usually this is fast enough
-            val musicTitle = CloudMusicHelper.getCloudMusicTitle()
-            cachedTitle = musicTitle ?: "No Music Playing"
-        }
+        // 1. Instant check: If title is null (e.g. not Windows or not playing), stop rendering.
+        // We read the variable directly; no heavy calculation here.
+        val titleToRender = cachedTitle ?: return
 
         val client = MinecraftClient.getInstance()
         val textRenderer = client.textRenderer
 
-        // 1. Define your text first (needed to calculate width)
-        val text = Text.literal("Playing: $cachedTitle")
+        // 2. Define your text
+        val text = Text.literal("Playing: $titleToRender")
 
-        // 2. Calculate the Right Edge
-        // We divide scaledWidth by your 'scale' var to match the matrix scaling
+        // 3. Calculate Dimensions (Standard Rendering Logic)
         val screenWidth = client.window.scaledWidth / scale
         val maxBoxWidth = 200
-        val padding = 10 // Space from the edge
+        val padding = 10
         val fullTextWidth = textRenderer.getWidth(text)
         val currentBoxWidth = fullTextWidth.coerceAtMost(maxBoxWidth)
 
-        // 3. Calculate Coordinates
-        // X = Far Right - Text Size - Padding
         val x = (screenWidth - currentBoxWidth - padding).toInt()
-        val y = 3 // Distance from top
+        val y = 3
 
         // 4. Render
         context.matrices.pushMatrix()
-        context.matrices.scale(scale, scale) // 2 args for 1.21.10
+        context.matrices.scale(scale, scale)
 
         RenderUtils.drawScrollingText(context, text, x, y, currentBoxWidth, color)
 
