@@ -17,13 +17,13 @@
 	"entrypoints": {
 		"main": [
 			{
-				"value": "com.as9929.display.netease.Neteasemusicdisplay",
+				"value": "com.as9929.display.netease.NeteaseMusicDisplay",
 				"adapter": "kotlin"
 			}
 		],
 		"fabric-datagen": [
 			{
-				"value": "com.as9929.display.netease.NeteasemusicdisplayDataGenerator",
+				"value": "com.as9929.display.netease.NeteaseMusicDisplayDataGenerator",
 				"adapter": "kotlin"
 			}
 		]

@@ -3,7 +3,7 @@ package com.as9929.display.netease
 import net.fabricmc.api.ModInitializer
 import org.slf4j.LoggerFactory
 
-object Neteasemusicdisplay : ModInitializer {
+object NeteaseMusicDisplay : ModInitializer {
 	const val MOD_ID = "netease-music-display"
     private val logger = LoggerFactory.getLogger(MOD_ID)
 
