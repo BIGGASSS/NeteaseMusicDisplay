@@ -2,6 +2,7 @@ plugins {
 	id 'net.fabricmc.fabric-loom-remap' version "${loom_version}"
 	id 'maven-publish'
 	id "org.jetbrains.kotlin.jvm" version "2.3.0"
+	id "org.jetbrains.kotlin.plugin.serialization" version "2.3.0"
 }
 
 version = project.mod_version
@@ -33,6 +34,9 @@ dependencies {
 	// Fabric API. This is technically optional, but you probably want it anyway.
 	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
 	modImplementation "net.fabricmc:fabric-language-kotlin:${project.fabric_kotlin_version}"
+	
+	// Kotlinx Serialization for JSON config
+	modImplementation "org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3"
 }
 
 processResources {

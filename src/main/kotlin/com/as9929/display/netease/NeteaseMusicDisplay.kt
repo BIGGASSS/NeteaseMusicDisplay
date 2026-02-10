@@ -1,5 +1,7 @@
 package com.as9929.display.netease
 
+import com.as9929.display.netease.command.ConfigCommand
+import com.as9929.display.netease.config.ConfigManager
 import net.fabricmc.api.ModInitializer
 import org.slf4j.LoggerFactory
 
@@ -8,9 +10,14 @@ object NeteaseMusicDisplay : ModInitializer {
     private val logger = LoggerFactory.getLogger(MOD_ID)
 
 	override fun onInitialize() {
-		// This code runs as soon as Minecraft is in a mod-load-ready state.
-		// However, some things (like resources) may still be uninitialized.
-		// Proceed with mild caution.
+		// Load configuration
+		ConfigManager.loadConfig()
+		logger.info("$MOD_ID config loaded.")
+		
+		// Register commands
+		ConfigCommand.register()
+		logger.info("$MOD_ID commands registered.")
+		
 		logger.info("$MOD_ID loaded.")
 	}
 }
