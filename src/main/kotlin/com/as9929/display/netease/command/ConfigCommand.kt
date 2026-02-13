@@ -7,6 +7,7 @@ import com.mojang.brigadier.arguments.FloatArgumentType
 import com.mojang.brigadier.arguments.IntegerArgumentType
 import com.mojang.brigadier.arguments.StringArgumentType
 import com.mojang.brigadier.context.CommandContext
+import com.mojang.brigadier.suggestion.SuggestionsBuilder
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource
@@ -39,6 +40,12 @@ object ConfigCommand {
         return (window.scaledHeight - 20).coerceAtLeast(0)
     }
 
+    // Maximum X position - prevents rendering off-screen
+    private fun getMaxX(): Int {
+        val window = MinecraftClient.getInstance().window
+        return (window.scaledWidth - ConfigManager.config.maxBoxWidth).coerceAtLeast(0)
+    }
+
     fun register() {
         ClientCommandRegistrationCallback.EVENT.register { dispatcher, _ ->
             registerCommands(dispatcher)
@@ -52,6 +59,10 @@ object ConfigCommand {
                     ClientCommandManager.literal("color")
                         .then(
                             ClientCommandManager.argument("value", StringArgumentType.string())
+                                .suggests { _, builder: SuggestionsBuilder ->
+                                    COLOR_MAP.keys.forEach { builder.suggest(it) }
+                                    builder.buildFuture()
+                                }
                                 .executes { ctx -> setColor(ctx, StringArgumentType.getString(ctx, "value")) }
                         )
                 )
@@ -136,16 +147,24 @@ object ConfigCommand {
         // Validate Y position to prevent off-screen rendering
         val maxY = getMaxY()
         val clampedY = y.coerceAtMost(maxY)
-        
+
         if (y > maxY) {
             ctx.source.sendFeedback(Text.literal("§eY position clamped from $y to $maxY to prevent off-screen rendering"))
         }
-        
+
+        // Validate X position to prevent off-screen rendering (skip for -1 which is auto right-align)
+        val maxX = getMaxX()
+        val clampedX = if (x >= 0) x.coerceAtMost(maxX) else x
+
+        if (x >= 0 && x > maxX) {
+            ctx.source.sendFeedback(Text.literal("§eX position clamped from $x to $maxX to prevent off-screen rendering"))
+        }
+
         val config = ConfigManager.config
-        val newConfig = config.copy(x = x, y = clampedY)
+        val newConfig = config.copy(x = clampedX, y = clampedY)
         ConfigManager.updateConfig(newConfig)
-        
-        val xText = if (x == -1) "auto (right-aligned)" else x.toString()
+
+        val xText = if (clampedX == -1) "auto (right-aligned)" else clampedX.toString()
         ctx.source.sendFeedback(Text.literal("§aMusic display position set to: X=$xText, Y=$clampedY"))
         return 1
     }
