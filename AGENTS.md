@@ -1,168 +1,134 @@
 # AGENTS.md - NeteaseMusicDisplay
 
-A Minecraft Fabric mod that displays the current playing song from Netease Music on Windows.
+This file is the execution guide for coding agents working in this repository.
 
-## Tech Stack
+## Project Intent
 
-- **Build System**: Gradle with Fabric Loom
-- **Primary Language**: Kotlin (2.3.0)
-- **Secondary Language**: Java (for Mixin classes)
-- **Java Version**: 21
-- **Minecraft Version**: 1.21.10
-- **Mod Loader**: Fabric
+NeteaseMusicDisplay is a Fabric client-side mod that renders the currently playing Netease Cloud Music track inside Minecraft.
 
-## Build Commands
+- Primary runtime target: Minecraft `1.21.10`, Java `21`, Fabric Loader.
+- Platform behavior: track detection is Windows-specific (`cloudmusic.exe` via JNA), but the mod must stay safe on non-Windows systems.
+- User-facing contract: `/nmd` commands configure overlay state, position, color, width, and scale.
+
+## Source Map (Current Code)
+
+- `src/main/kotlin/com/as9929/display/netease/NeteaseMusicDisplay.kt`
+  - Mod entrypoint. Loads config and registers client commands.
+- `src/main/java/com/as9929/display/netease/mixin/InGameHudMixin.java`
+  - Injects into HUD render to call `TextRender.onRender(...)`.
+- `src/main/kotlin/com/as9929/display/netease/TextRender.kt`
+  - Render pipeline + background polling thread (1s cadence) for song title cache.
+- `src/main/kotlin/com/as9929/display/netease/CloudMusicHelper.kt`
+  - Windows API access through JNA (`user32` / `kernel32`) to read title from `cloudmusic.exe` windows.
+- `src/main/kotlin/com/as9929/display/netease/RenderUtils.kt`
+  - Text drawing and scrolling logic with scissor clipping.
+- `src/main/kotlin/com/as9929/display/netease/config/ModConfig.kt`
+  - Config model + `ConfigManager` load/save/update behavior.
+- `src/main/kotlin/com/as9929/display/netease/command/ConfigCommand.kt`
+  - `/nmd` command tree and validation logic.
+
+## Agent Priorities
+
+1. Keep runtime behavior stable for players.
+2. Preserve render-thread safety.
+3. Preserve non-Windows safety.
+4. Keep config compatibility and command UX intact.
+5. Prefer small, reviewable diffs over broad refactors.
+
+## Non-Negotiable Invariants
+
+### Windows/JNA Safety
+
+- Always gate Windows-only behavior with an OS check before any JNA call path.
+- Keep native libraries lazily loaded (`by lazy`) so non-Windows startup does not fail.
+- Close native handles in `finally` blocks.
+- Expected failure path is `null` / no render, not a crash.
+
+### Threading and Render Safety
+
+- Do not run heavy process/window scans on the render thread.
+- Shared mutable state between background polling and render code must remain thread-safe (`@Volatile` or stronger).
+- Minecraft client access and drawing logic must stay on the render thread.
+
+### Rendering Behavior
+
+- `x == -1` means auto right-aligned placement.
+- Maintain matrix push/pop balance and scissor enable/disable balance.
+- Scrolling text should remain smooth and clipped to `maxBoxWidth`.
+
+### Config and Command Contract
+
+- Config file path/name is `config/netease-music-display.json`.
+- Keep `ModConfig` defaults, `/nmd` argument bounds, and status output coherent after changes.
+- If adding/changing config fields, keep backward compatibility (`ignoreUnknownKeys` is already enabled).
+
+## Build and Validation
+
+Use Gradle wrapper from repo root:
 
 ```bash
-# Build the mod JAR
 ./gradlew build
-
-# Run all tests
 ./gradlew test
-
-# Run a specific test class
-./gradlew test --tests "com.as9929.display.netease.YourTestClass"
-
-# Run a specific test method
-./gradlew test --tests "com.as9929.display.netease.YourTestClass.testMethod"
-
-# Run all checks (includes tests, ABI checks)
 ./gradlew check
-
-# Clean build directory
-./gradlew clean
-
-# Full clean build
-./gradlew clean build
-
-# Generate sources JAR
-./gradlew sourcesJar
 ```
 
-## Project Structure
+Notes:
+- Tests are currently absent; add them under `src/test/kotlin/...` when introducing non-trivial logic.
+- For documentation-only edits, full build is optional.
 
-```
-src/
-├── main/
-│   ├── java/com/as9929/display/netease/mixin/    # Java Mixin classes
-│   ├── kotlin/com/as9929/display/netease/        # Kotlin source
-│   └── resources/                                 # Mod metadata, assets
-│       ├── fabric.mod.json
-│       └── netease-music-display.mixins.json
-├── test/                                          # Test sources (if any)
-build.gradle                                      # Build configuration
-gradle.properties                                 # Version constants
-settings.gradle                                   # Project settings
-```
-
-## Code Style Guidelines
+## Coding Conventions
 
 ### Kotlin
 
-- **Indentation**: 4 spaces (no tabs)
-- **Line endings**: LF
-- **Package**: `com.as9929.display.netease`
-- Use `object` for singletons (e.g., `object TextRender`)
-- Use `by lazy` for expensive initialization
-- Prefer `val` over `var`
-- Use nullable types (`String?`) over exceptions for optional returns
-- Comments: Use `// --- Description ---` for section headers
+- 4-space indentation, LF endings.
+- Package: `com.as9929.display.netease`.
+- Prefer immutable data and `copy(...)` updates for config.
+- Prefer nullable return paths for expected runtime misses.
+- Use SLF4J logging instead of stack trace prints in new code.
 
-Example:
-```kotlin
-package com.as9929.display.netease
+### Java/Mixin
 
-import net.fabricmc.api.ModInitializer
+- Keep mixins in `com.as9929.display.netease.mixin`.
+- Use explicit `@Inject` targets and stable injection points.
+- Avoid broad injections when a precise target is available.
 
-object NeteaseMusicDisplay : ModInitializer {
-    const val MOD_ID = "netease-music-display"
-    
-    override fun onInitialize() {
-        // Initialization code
-    }
-}
-```
+### Imports and Naming
 
-### Java
+- Use explicit imports; avoid wildcard imports.
+- Class/Object: PascalCase, method/property: camelCase, constants: UPPER_SNAKE_CASE.
 
-- **Indentation**: 4 spaces
-- **Package**: `com.as9929.display.netease.mixin` for Mixin classes
-- Use Mixin pattern for Minecraft injection points
-- Annotations on separate lines for complex injections
+## When Changing Specific Areas
 
-Example:
-```java
-package com.as9929.display.netease.mixin;
+### If you touch `CloudMusicHelper`
 
-import org.spongepowered.asm.mixin.Mixin;
+- Re-verify OS guard, lazy native loading, and handle cleanup.
+- Keep noisy/error-prone native failures non-fatal.
 
-@Mixin(InGameHud.class)
-public class InGameHudMixin {
-    @Inject(
-        method = "render",
-        at = @At(value = "INVOKE", target = "...")
-    )
-    private void onRender(...) { }
-}
-```
+### If you touch rendering (`TextRender` / `RenderUtils` / mixin)
 
-### Naming Conventions
+- Re-verify no heavy work moved onto render path.
+- Re-verify clipping, scale, and right-alignment behavior.
 
-- **Classes**: PascalCase (e.g., `CloudMusicHelper`, `TextRender`)
-- **Objects**: PascalCase (e.g., `TextRender.INSTANCE`)
-- **Methods/Functions**: camelCase (e.g., `getCloudMusicTitle()`)
-- **Constants**: UPPER_SNAKE_CASE (e.g., `MOD_ID`, `PROCESS_QUERY_INFORMATION`)
-- **Packages**: lowercase (e.g., `com.as9929.display.netease`)
+### If you touch config or commands
 
-### Imports
+- Re-verify all `/nmd` subcommands:
+  - `color`, `pos`, `width`, `scale`, `toggle`, `reset`, `status`
+- Keep command validation messages clear and user-safe (clamping where needed).
 
-- Group imports by source:
-  1. Kotlin/Java standard library
-  2. Minecraft/Fabric libraries
-  3. Project imports
-  4. Third-party libraries (JNA, etc.)
-- Use wildcard imports sparingly
+### If you update versions/dependencies
 
-### Error Handling
+- Update `gradle.properties` and ensure `build.gradle` remains consistent.
+- Confirm `fabric.mod.json` dependency bounds are still accurate.
 
-- Use nullable return types instead of throwing exceptions for expected failures
-- Wrap platform-specific code (Windows API) with OS checks first
-- Use try-finally for resource cleanup (handles, processes)
-- Log errors using SLF4J: `LoggerFactory.getLogger(MOD_ID)`
+## PR/Change Checklist for Agents
 
-### Threading
+- Change is scoped to the requested outcome.
+- No regressions to non-Windows startup/runtime behavior.
+- No render-thread blocking added.
+- Command/config behavior remains coherent.
+- Build/test status reported honestly (including if not run).
 
-- Offload heavy work to background threads using `Executors`
-- Mark shared mutable state with `@Volatile`
-- Use daemon threads: `t.isDaemon = true`
-- Always access Minecraft client on main render thread only
+## Reference Links
 
-### Mixin Guidelines
-
-- Place all Mixin classes in `mixin` package
-- Use `@Inject` for adding behavior
-- Use proper `@At` targets (e.g., `INVOKE`, `HEAD`, `TAIL`)
-- Include shift when needed: `shift = At.Shift.BEFORE`
-
-## Key Dependencies
-
-- Fabric Loader: `0.18.4`
-- Fabric API: `0.138.4+1.21.10`
-- Fabric Language Kotlin: `1.13.8+kotlin.2.3.0`
-- JNA: For Windows API access (cloudmusic.exe integration)
-
-## Testing
-
-Currently no tests exist. When adding tests:
-1. Place in `src/test/kotlin/` mirroring main package structure
-2. Use JUnit 5 (included via Gradle)
-3. Run with `./gradlew test`
-
-## CI/CD
-
-GitHub Actions workflow at `.github/workflows/build.yml`
-
-## Resources
-
-- Fabric Wiki: https://fabricmc.net/wiki
-- Mixin Wiki: https://github.com/SpongePowered/Mixin/wiki
+- Fabric docs: https://fabricmc.net/wiki
+- Mixin docs: https://github.com/SpongePowered/Mixin/wiki
