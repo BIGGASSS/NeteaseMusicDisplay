@@ -37,6 +37,8 @@ dependencies {
 	
 	// Kotlinx Serialization for JSON config
 	modImplementation "org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3"
+
+	testImplementation "org.jetbrains.kotlin:kotlin-test:2.3.0"
 }
 
 processResources {
@@ -65,6 +67,10 @@ java {
 
 	sourceCompatibility = JavaVersion.VERSION_21
 	targetCompatibility = JavaVersion.VERSION_21
+}
+
+test {
+	useJUnitPlatform()
 }
 
 jar {

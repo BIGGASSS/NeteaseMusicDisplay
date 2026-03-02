@@ -14,7 +14,8 @@ data class ModConfig(
     val y: Int = 3,               // absolute Y position from top
     val colorHex: String = "#FFFF00",  // Yellow default (matches hardcoded color)
     val maxBoxWidth: Int = 200,   // Matches hardcoded maxBoxWidth
-    val scale: Float = 1.0f       // Matches hardcoded scale
+    val scale: Float = 1.0f,      // Matches hardcoded scale
+    val linuxMprisProcessKeyword: String = "electron"
 ) {
     companion object {
         const val DEFAULT_X = -1
@@ -22,6 +23,7 @@ data class ModConfig(
         const val DEFAULT_COLOR = "#FFFF00"
         const val DEFAULT_MAX_WIDTH = 200
         const val DEFAULT_SCALE = 1.0f
+        const val DEFAULT_LINUX_MPRIS_KEYWORD = "electron"
     }
 }
 
