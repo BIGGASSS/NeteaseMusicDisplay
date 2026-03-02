@@ -238,9 +238,35 @@ object CloudMusicHelper {
     }
 
     private fun decodeBusctlString(value: String): String {
-        return value
-            .replace("\\\\", "\\")
-            .replace("\\\"", "\"")
+        val bytes = mutableListOf<Byte>()
+        var i = 0
+        while (i < value.length) {
+            if (value[i] == '\\' && i + 1 < value.length) {
+                when (value[i + 1]) {
+                    '\\' -> { bytes.add('\\'.code.toByte()); i += 2 }
+                    '"' -> { bytes.add('"'.code.toByte()); i += 2 }
+                    'n' -> { bytes.add('\n'.code.toByte()); i += 2 }
+                    't' -> { bytes.add('\t'.code.toByte()); i += 2 }
+                    in '0'..'3' -> {
+                        // Octal escape: \NNN (1-3 digits)
+                        val end = (i + 4).coerceAtMost(value.length)
+                        val octal = value.substring(i + 1, end).takeWhile { it in '0'..'7' }
+                        if (octal.isNotEmpty()) {
+                            bytes.add(octal.toInt(8).toByte())
+                            i += 1 + octal.length
+                        } else {
+                            bytes.add(value[i].code.toByte())
+                            i++
+                        }
+                    }
+                    else -> { bytes.add(value[i].code.toByte()); i++ }
+                }
+            } else {
+                bytes.add(value[i].code.toByte())
+                i++
+            }
+        }
+        return String(bytes.toByteArray(), Charsets.UTF_8)
     }
 
     private fun getWText(hWnd: Pointer): String {

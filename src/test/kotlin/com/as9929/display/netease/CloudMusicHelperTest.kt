@@ -91,4 +91,18 @@ class CloudMusicHelperTest {
 
         assertNull(metadata)
     }
+
+    @Test
+    fun decodesOctalEscapedUtf8InMetadata() {
+        // \351\255\224\347\216\213 = 魔王 in UTF-8 octal
+        val metadataOutput = """
+            a{sv} 2 "xesam:artist" as 1 "sasakure.UK" "xesam:title" s "\351\255\224\347\216\213"
+        """.trimIndent()
+
+        val metadata = CloudMusicHelper.parseLinuxMetadata(metadataOutput)
+
+        assertNotNull(metadata)
+        assertEquals("魔王", metadata.title)
+        assertEquals("sasakure.UK", metadata.artist)
+    }
 }
