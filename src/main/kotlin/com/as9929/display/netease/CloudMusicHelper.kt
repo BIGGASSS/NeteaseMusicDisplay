@@ -123,11 +123,29 @@ object CloudMusicHelper {
         return formatLinuxDisplayTitle(parseLinuxMetadata(metadataOutput))
     }
 
+    private val dbusAddress: String? by lazy {
+        System.getenv("DBUS_SESSION_BUS_ADDRESS")
+            ?: "/run/user/${getUid()}/bus"
+                .takeIf { java.io.File(it).exists() }
+                ?.let { "unix:path=$it" }
+    }
+
+    private fun getUid(): String {
+        return try {
+            ProcessBuilder("id", "-u")
+                .start()
+                .inputStream.bufferedReader().use { it.readText().trim() }
+        } catch (_: Exception) {
+            "1000"
+        }
+    }
+
     private fun runBusctl(vararg args: String): String? {
         return try {
-            val process = ProcessBuilder(listOf("busctl") + args)
+            val pb = ProcessBuilder(listOf("busctl") + args)
                 .redirectErrorStream(true)
-                .start()
+            dbusAddress?.let { pb.environment()["DBUS_SESSION_BUS_ADDRESS"] = it }
+            val process = pb.start()
 
             if (!process.waitFor(BUSCTL_TIMEOUT_MS, TimeUnit.MILLISECONDS)) {
                 process.destroyForcibly()
