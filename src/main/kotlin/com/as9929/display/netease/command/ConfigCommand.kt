@@ -112,6 +112,19 @@ object ConfigCommand {
                     ClientCommandManager.literal("status")
                         .executes { ctx -> status(ctx) }
                 )
+                .then(
+                    ClientCommandManager.literal("mpris")
+                        .then(
+                            ClientCommandManager.literal("keyword")
+                                .then(
+                                    ClientCommandManager.argument("value", StringArgumentType.string())
+                                        .executes { ctx ->
+                                            val value = StringArgumentType.getString(ctx, "value")
+                                            setMprisKeyword(ctx, value)
+                                        }
+                                )
+                        )
+                )
         )
     }
 
@@ -215,7 +228,23 @@ object ConfigCommand {
         ctx.source.sendFeedback(Text.literal("Color: ${config.colorHex}"))
         ctx.source.sendFeedback(Text.literal("Max Width: ${config.maxBoxWidth}px"))
         ctx.source.sendFeedback(Text.literal("Scale: ${config.scale}"))
+        ctx.source.sendFeedback(Text.literal("Linux MPRIS Keyword: ${config.linuxMprisProcessKeyword}"))
         
+        return 1
+    }
+
+    private fun setMprisKeyword(ctx: CommandContext<FabricClientCommandSource>, value: String): Int {
+        val keyword = value.trim()
+        if (keyword.isBlank()) {
+            ctx.source.sendError(Text.literal("MPRIS keyword cannot be blank"))
+            return 0
+        }
+
+        val config = ConfigManager.config
+        val newConfig = config.copy(linuxMprisProcessKeyword = keyword)
+        ConfigManager.updateConfig(newConfig)
+
+        ctx.source.sendFeedback(Text.literal("§aLinux MPRIS process keyword set to: $keyword"))
         return 1
     }
 }
