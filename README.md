@@ -2,8 +2,6 @@
 
 A Minecraft Fabric mod that displays the current playing song in Netease Music on Windows and Linux (via MPRIS).
 
-Supports Minecraft `1.21.11` on Fabric.
-
 ## Available Commands
 
 - `/nmd color <hex|name>` - Set color (e.g., `FF5733`, `red`, `yellow`)
