@@ -1,8 +1,8 @@
 plugins {
 	id 'net.fabricmc.fabric-loom-remap' version "${loom_version}"
 	id 'maven-publish'
-	id "org.jetbrains.kotlin.jvm" version "2.3.0"
-	id "org.jetbrains.kotlin.plugin.serialization" version "2.3.0"
+	id "org.jetbrains.kotlin.jvm" version "2.3.21"
+	id "org.jetbrains.kotlin.plugin.serialization" version "2.3.21"
 }
 
 version = project.mod_version
@@ -29,7 +29,7 @@ fabricApi {
 dependencies {
 	// To change the versions see the gradle.properties file
 	minecraft "com.mojang:minecraft:${project.minecraft_version}"
-	mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
+	mappings files("mappings/identity.jar")
 	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
 	// Fabric API. This is technically optional, but you probably want it anyway.
 	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
@@ -38,7 +38,7 @@ dependencies {
 	// Kotlinx Serialization for JSON config
 	modImplementation "org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3"
 
-	testImplementation "org.jetbrains.kotlin:kotlin-test:2.3.0"
+	testImplementation "org.jetbrains.kotlin:kotlin-test:2.3.21"
 }
 
 processResources {
@@ -50,23 +50,22 @@ processResources {
 }
 
 tasks.withType(JavaCompile).configureEach {
-	it.options.release = 21
+	it.options.release = 25
 }
 
 tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).all {
 	kotlinOptions {
-		jvmTarget = 21
+		jvmTarget = 25
 	}
 }
 
 java {
-	// Loom will automatically attach sourcesJar to a RemapSourcesJar task and to the "build" task
-	// if it is present.
-	// If you remove this line, sources will not be generated.
-	withSourcesJar()
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(25)
+	}
 
-	sourceCompatibility = JavaVersion.VERSION_21
-	targetCompatibility = JavaVersion.VERSION_21
+	sourceCompatibility = JavaVersion.VERSION_25
+	targetCompatibility = JavaVersion.VERSION_25
 }
 
 test {

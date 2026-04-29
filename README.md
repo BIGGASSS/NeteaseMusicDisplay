@@ -4,7 +4,7 @@ A Minecraft Fabric mod that displays the current playing song in Netease Music o
 
 ## Dependencies
 
-- Minecraft 1.21.11 w/ Fabric
+- Minecraft 26.1.2 w/ Fabric
 - Fabric API
 - Fabric Language Kotlin
 

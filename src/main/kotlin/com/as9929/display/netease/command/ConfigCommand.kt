@@ -8,11 +8,11 @@ import com.mojang.brigadier.arguments.IntegerArgumentType
 import com.mojang.brigadier.arguments.StringArgumentType
 import com.mojang.brigadier.context.CommandContext
 import com.mojang.brigadier.suggestion.SuggestionsBuilder
-import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager
+import net.fabricmc.fabric.api.client.command.v2.ClientCommands
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource
-import net.minecraft.client.MinecraftClient
-import net.minecraft.text.Text
+import net.minecraft.client.Minecraft
+import net.minecraft.network.chat.Component
 
 object ConfigCommand {
     private val COLOR_MAP = mapOf(
@@ -36,14 +36,14 @@ object ConfigCommand {
 
     // Maximum Y position - prevents rendering off-screen
     private fun getMaxY(): Int {
-        val window = MinecraftClient.getInstance().window
-        return (window.scaledHeight - 20).coerceAtLeast(0)
+        val window = Minecraft.getInstance().window
+        return (window.guiScaledHeight - 20).coerceAtLeast(0)
     }
 
     // Maximum X position - prevents rendering off-screen
     private fun getMaxX(): Int {
-        val window = MinecraftClient.getInstance().window
-        return (window.scaledWidth - ConfigManager.config.maxBoxWidth).coerceAtLeast(0)
+        val window = Minecraft.getInstance().window
+        return (window.guiScaledWidth - ConfigManager.config.maxBoxWidth).coerceAtLeast(0)
     }
 
     fun register() {
@@ -54,11 +54,11 @@ object ConfigCommand {
 
     private fun registerCommands(dispatcher: CommandDispatcher<FabricClientCommandSource>) {
         dispatcher.register(
-            ClientCommandManager.literal("nmd")
+            ClientCommands.literal("nmd")
                 .then(
-                    ClientCommandManager.literal("color")
+                    ClientCommands.literal("color")
                         .then(
-                            ClientCommandManager.argument("value", StringArgumentType.string())
+                            ClientCommands.argument("value", StringArgumentType.string())
                                 .suggests { _, builder: SuggestionsBuilder ->
                                     COLOR_MAP.keys.forEach { builder.suggest(it) }
                                     builder.buildFuture()
@@ -67,11 +67,11 @@ object ConfigCommand {
                         )
                 )
                 .then(
-                    ClientCommandManager.literal("pos")
+                    ClientCommands.literal("pos")
                         .then(
-                            ClientCommandManager.argument("x", IntegerArgumentType.integer(-1))
+                            ClientCommands.argument("x", IntegerArgumentType.integer(-1))
                                 .then(
-                                    ClientCommandManager.argument("y", IntegerArgumentType.integer(0))
+                                    ClientCommands.argument("y", IntegerArgumentType.integer(0))
                                         .executes { ctx ->
                                             val x = IntegerArgumentType.getInteger(ctx, "x")
                                             val y = IntegerArgumentType.getInteger(ctx, "y")
@@ -81,9 +81,9 @@ object ConfigCommand {
                         )
                 )
                 .then(
-                    ClientCommandManager.literal("width")
+                    ClientCommands.literal("width")
                         .then(
-                            ClientCommandManager.argument("pixels", IntegerArgumentType.integer(50, 500))
+                            ClientCommands.argument("pixels", IntegerArgumentType.integer(50, 500))
                                 .executes { ctx ->
                                     val width = IntegerArgumentType.getInteger(ctx, "pixels")
                                     setWidth(ctx, width)
@@ -91,9 +91,9 @@ object ConfigCommand {
                         )
                 )
                 .then(
-                    ClientCommandManager.literal("scale")
+                    ClientCommands.literal("scale")
                         .then(
-                            ClientCommandManager.argument("value", FloatArgumentType.floatArg(0.5f, 3.0f))
+                            ClientCommands.argument("value", FloatArgumentType.floatArg(0.5f, 3.0f))
                                 .executes { ctx ->
                                     val scale = FloatArgumentType.getFloat(ctx, "value")
                                     setScale(ctx, scale)
@@ -101,23 +101,23 @@ object ConfigCommand {
                         )
                 )
                 .then(
-                    ClientCommandManager.literal("toggle")
+                    ClientCommands.literal("toggle")
                         .executes { ctx -> toggle(ctx) }
                 )
                 .then(
-                    ClientCommandManager.literal("reset")
+                    ClientCommands.literal("reset")
                         .executes { ctx -> reset(ctx) }
                 )
                 .then(
-                    ClientCommandManager.literal("status")
+                    ClientCommands.literal("status")
                         .executes { ctx -> status(ctx) }
                 )
                 .then(
-                    ClientCommandManager.literal("mpris")
+                    ClientCommands.literal("mpris")
                         .then(
-                            ClientCommandManager.literal("keyword")
+                            ClientCommands.literal("keyword")
                                 .then(
-                                    ClientCommandManager.argument("value", StringArgumentType.string())
+                                    ClientCommands.argument("value", StringArgumentType.string())
                                         .executes { ctx ->
                                             val value = StringArgumentType.getString(ctx, "value")
                                             setMprisKeyword(ctx, value)
@@ -141,7 +141,7 @@ object ConfigCommand {
             
             // Validate hex length and characters
             if (hex.length != 6 || !hex.all { it.isDigit() || it in 'A'..'F' || it in 'a'..'f' }) {
-                ctx.source.sendError(Text.literal("Invalid color. Use hex code (e.g., #FF5733) or color name (e.g., red, yellow)"))
+                ctx.source.sendError(Component.literal("Invalid color. Use hex code (e.g., #FF5733) or color name (e.g., red, yellow)"))
                 return 0
             }
             
@@ -152,7 +152,7 @@ object ConfigCommand {
         val newConfig = config.copy(colorHex = hexValue)
         ConfigManager.updateConfig(newConfig)
         
-        ctx.source.sendFeedback(Text.literal("§aMusic display color set to: $hexValue"))
+        ctx.source.sendFeedback(Component.literal("§aMusic display color set to: $hexValue"))
         return 1
     }
 
@@ -162,7 +162,7 @@ object ConfigCommand {
         val clampedY = y.coerceAtMost(maxY)
 
         if (y > maxY) {
-            ctx.source.sendFeedback(Text.literal("§eY position clamped from $y to $maxY to prevent off-screen rendering"))
+            ctx.source.sendFeedback(Component.literal("§eY position clamped from $y to $maxY to prevent off-screen rendering"))
         }
 
         // Validate X position to prevent off-screen rendering (skip for -1 which is auto right-align)
@@ -170,7 +170,7 @@ object ConfigCommand {
         val clampedX = if (x >= 0) x.coerceAtMost(maxX) else x
 
         if (x >= 0 && x > maxX) {
-            ctx.source.sendFeedback(Text.literal("§eX position clamped from $x to $maxX to prevent off-screen rendering"))
+            ctx.source.sendFeedback(Component.literal("§eX position clamped from $x to $maxX to prevent off-screen rendering"))
         }
 
         val config = ConfigManager.config
@@ -178,7 +178,7 @@ object ConfigCommand {
         ConfigManager.updateConfig(newConfig)
 
         val xText = if (clampedX == -1) "auto (right-aligned)" else clampedX.toString()
-        ctx.source.sendFeedback(Text.literal("§aMusic display position set to: X=$xText, Y=$clampedY"))
+        ctx.source.sendFeedback(Component.literal("§aMusic display position set to: X=$xText, Y=$clampedY"))
         return 1
     }
 
@@ -187,7 +187,7 @@ object ConfigCommand {
         val newConfig = config.copy(maxBoxWidth = width)
         ConfigManager.updateConfig(newConfig)
         
-        ctx.source.sendFeedback(Text.literal("§aMusic display max width set to: $width pixels"))
+        ctx.source.sendFeedback(Component.literal("§aMusic display max width set to: $width pixels"))
         return 1
     }
 
@@ -196,7 +196,7 @@ object ConfigCommand {
         val newConfig = config.copy(scale = scale)
         ConfigManager.updateConfig(newConfig)
         
-        ctx.source.sendFeedback(Text.literal("§aMusic display scale set to: $scale"))
+        ctx.source.sendFeedback(Component.literal("§aMusic display scale set to: $scale"))
         return 1
     }
 
@@ -206,13 +206,13 @@ object ConfigCommand {
         ConfigManager.updateConfig(newConfig)
         
         val status = if (newConfig.enabled) "§aenabled" else "§cdisabled"
-        ctx.source.sendFeedback(Text.literal("Music display is now $status"))
+        ctx.source.sendFeedback(Component.literal("Music display is now $status"))
         return 1
     }
 
     private fun reset(ctx: CommandContext<FabricClientCommandSource>): Int {
         ConfigManager.resetToDefaults()
-        ctx.source.sendFeedback(Text.literal("§aMusic display settings reset to defaults"))
+        ctx.source.sendFeedback(Component.literal("§aMusic display settings reset to defaults"))
         return 1
     }
 
@@ -222,13 +222,13 @@ object ConfigCommand {
         val xText = if (config.x == -1) "auto" else config.x.toString()
         val status = if (config.enabled) "§aenabled" else "§cdisabled"
         
-        ctx.source.sendFeedback(Text.literal("§6=== Netease Music Display Status ==="))
-        ctx.source.sendFeedback(Text.literal("Status: $status"))
-        ctx.source.sendFeedback(Text.literal("Position: X=$xText, Y=${config.y}"))
-        ctx.source.sendFeedback(Text.literal("Color: ${config.colorHex}"))
-        ctx.source.sendFeedback(Text.literal("Max Width: ${config.maxBoxWidth}px"))
-        ctx.source.sendFeedback(Text.literal("Scale: ${config.scale}"))
-        ctx.source.sendFeedback(Text.literal("Linux MPRIS Keyword: ${config.linuxMprisProcessKeyword}"))
+        ctx.source.sendFeedback(Component.literal("§6=== Netease Music Display Status ==="))
+        ctx.source.sendFeedback(Component.literal("Status: $status"))
+        ctx.source.sendFeedback(Component.literal("Position: X=$xText, Y=${config.y}"))
+        ctx.source.sendFeedback(Component.literal("Color: ${config.colorHex}"))
+        ctx.source.sendFeedback(Component.literal("Max Width: ${config.maxBoxWidth}px"))
+        ctx.source.sendFeedback(Component.literal("Scale: ${config.scale}"))
+        ctx.source.sendFeedback(Component.literal("Linux MPRIS Keyword: ${config.linuxMprisProcessKeyword}"))
         
         return 1
     }
@@ -236,7 +236,7 @@ object ConfigCommand {
     private fun setMprisKeyword(ctx: CommandContext<FabricClientCommandSource>, value: String): Int {
         val keyword = value.trim()
         if (keyword.isBlank()) {
-            ctx.source.sendError(Text.literal("MPRIS keyword cannot be blank"))
+            ctx.source.sendError(Component.literal("MPRIS keyword cannot be blank"))
             return 0
         }
 
@@ -244,7 +244,7 @@ object ConfigCommand {
         val newConfig = config.copy(linuxMprisProcessKeyword = keyword)
         ConfigManager.updateConfig(newConfig)
 
-        ctx.source.sendFeedback(Text.literal("§aLinux MPRIS process keyword set to: $keyword"))
+        ctx.source.sendFeedback(Component.literal("§aLinux MPRIS process keyword set to: $keyword"))
         return 1
     }
 }
