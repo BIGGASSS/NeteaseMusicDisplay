@@ -34,16 +34,22 @@ object ConfigCommand {
         "white" to "#FFFFFF"
     )
 
-    // Maximum Y position - prevents rendering off-screen
+    // Maximum Y position (in screen-GUI pixels) - prevents rendering off-screen.
+    // Reserves the scaled line height so the clamp matches the scaled render.
     private fun getMaxY(): Int {
-        val window = Minecraft.getInstance().window
-        return (window.guiScaledHeight - 20).coerceAtLeast(0)
+        val client = Minecraft.getInstance()
+        val scale = ConfigManager.config.scale
+        val boxHeight = (client.font.lineHeight * scale).toInt()
+        return (client.window.guiScaledHeight - boxHeight).coerceAtLeast(0)
     }
 
-    // Maximum X position - prevents rendering off-screen
+    // Maximum X position (in screen-GUI pixels) - prevents rendering off-screen.
+    // Reserves the scaled max box width so the clamp matches the scaled render.
     private fun getMaxX(): Int {
-        val window = Minecraft.getInstance().window
-        return (window.guiScaledWidth - ConfigManager.config.maxBoxWidth).coerceAtLeast(0)
+        val client = Minecraft.getInstance()
+        val scale = ConfigManager.config.scale
+        val boxWidth = (ConfigManager.config.maxBoxWidth * scale).toInt()
+        return (client.window.guiScaledWidth - boxWidth).coerceAtLeast(0)
     }
 
     fun register() {
