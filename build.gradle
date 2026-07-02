@@ -34,9 +34,9 @@ dependencies {
 	// Fabric API. This is technically optional, but you probably want it anyway.
 	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
 	modImplementation "net.fabricmc:fabric-language-kotlin:${project.fabric_kotlin_version}"
-	
-	// Kotlinx Serialization for JSON config
-	modImplementation "org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3"
+
+	// kotlinx-serialization-json is provided (and bundled) by fabric-language-kotlin,
+	// so it must not be declared explicitly to avoid a version conflict at runtime.
 
 	testImplementation "org.jetbrains.kotlin:kotlin-test:2.3.21"
 }

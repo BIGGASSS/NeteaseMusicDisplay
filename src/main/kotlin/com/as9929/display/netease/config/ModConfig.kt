@@ -6,6 +6,7 @@ import kotlinx.serialization.json.Json
 import net.fabricmc.loader.api.FabricLoader
 import org.slf4j.LoggerFactory
 import java.io.File
+import java.util.concurrent.Executors
 
 @Serializable
 data class ModConfig(
@@ -24,6 +25,20 @@ data class ModConfig(
         const val DEFAULT_MAX_WIDTH = 200
         const val DEFAULT_SCALE = 1.0f
         const val DEFAULT_LINUX_MPRIS_KEYWORD = "electron"
+
+        /** Opaque yellow (ARGB), used when the configured color cannot be parsed. */
+        val FALLBACK_COLOR: Int = 0xFFFFFF00.toInt()
+
+        private val HEX_COLOR_REGEX = Regex("^[0-9a-fA-F]{6}$")
+
+        /** Parses a "#RRGGBB" or "RRGGBB" hex string into an opaque ARGB int. */
+        fun parseColor(hex: String): Int {
+            val normalized = hex.trim().removePrefix("#")
+            if (!HEX_COLOR_REGEX.matches(normalized)) {
+                return FALLBACK_COLOR
+            }
+            return normalized.toInt(16) or 0xFF000000.toInt()
+        }
     }
 }
 
@@ -36,12 +51,20 @@ object ConfigManager {
         ignoreUnknownKeys = true
     }
 
+    // Single-threaded executor so saves are serialized in submission order,
+    // preventing an older config from overwriting a newer one.
+    // Declared before _config so it is initialized before loadConfig() may use it.
+    private val saveExecutor = Executors.newSingleThreadExecutor { r ->
+        Thread(r, "NeteaseMusicDisplay-ConfigSave").apply { isDaemon = true }
+    }
+
+    // Cache the parsed color for performance. Initialized before _config so that
+    // the value assigned during loadConfig() is not reset by this initializer.
+    @Volatile
+    private var _cachedColor: Int = ModConfig.FALLBACK_COLOR
+
     @Volatile
     private var _config: ModConfig = loadConfig()
-    
-    // Cache the parsed color for performance
-    @Volatile
-    private var _cachedColor: Int? = null
 
     val config: ModConfig
         get() = _config
@@ -51,21 +74,24 @@ object ConfigManager {
             if (configFile.exists()) {
                 val content = configFile.readText()
                 val config = json.decodeFromString<ModConfig>(content)
-                _cachedColor = parseColor(config.colorHex)
+                _cachedColor = ModConfig.parseColor(config.colorHex)
                 config
             } else {
-                ModConfig().also { saveConfig(it) }
+                ModConfig().also {
+                    _cachedColor = ModConfig.parseColor(it.colorHex)
+                    saveConfig(it)
+                }
             }
         } catch (e: Exception) {
             logger.error("Failed to load config, using defaults", e)
-            _cachedColor = 0xFFFF00
+            _cachedColor = ModConfig.parseColor(ModConfig.DEFAULT_COLOR)
             ModConfig()
         }
     }
 
     fun saveConfig(config: ModConfig = _config) {
         // Offload to background thread to avoid blocking the main thread
-        Thread {
+        saveExecutor.execute {
             try {
                 if (!configDir.exists()) {
                     configDir.mkdirs()
@@ -75,16 +101,12 @@ object ConfigManager {
             } catch (e: Exception) {
                 logger.error("Failed to save config", e)
             }
-        }.apply {
-            isDaemon = true
-            name = "NeteaseMusicDisplay-ConfigSave"
-            start()
         }
     }
 
     fun updateConfig(newConfig: ModConfig) {
         _config = newConfig
-        _cachedColor = parseColor(newConfig.colorHex)
+        _cachedColor = ModConfig.parseColor(newConfig.colorHex)
         saveConfig(newConfig)
     }
 
@@ -94,18 +116,6 @@ object ConfigManager {
 
     // Thread-safe getter for cached color
     fun getColorInt(): Int {
-        return _cachedColor ?: 0xFFFF00
-    }
-
-    private fun parseColor(hex: String): Int {
-        return try {
-            var colorString = hex.trim()
-            if (colorString.startsWith("#")) {
-                colorString = colorString.substring(1)
-            }
-            colorString.toInt(16) or 0xFF000000.toInt() // Add alpha
-        } catch (e: Exception) {
-            0xFFFF00 // Fallback to yellow
-        }
+        return _cachedColor
     }
 }

@@ -54,13 +54,16 @@ object TextRender {
         val fullTextWidth = textRenderer.width(text)
         val currentBoxWidth = fullTextWidth.coerceAtMost(maxBoxWidth)
 
-        // Calculate X position: use config if not -1, otherwise auto right-align
+        // Calculate X position: use config if not -1, otherwise auto right-align.
+        // The pose is scaled by `scale` below, so user-provided coordinates (which are
+        // expressed in actual screen-GUI pixels, matching the command clamps) must be
+        // divided by scale to land at the intended on-screen position.
         val x = if (config.x == -1) {
             (screenWidth - currentBoxWidth - padding).toInt()
         } else {
-            config.x
+            (config.x / scale).toInt()
         }
-        val y = config.y
+        val y = (config.y / scale).toInt()
         
         // Get color from config
         val color = ConfigManager.getColorInt()

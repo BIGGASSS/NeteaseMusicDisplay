@@ -8,3 +8,9 @@ pluginManagement {
 		gradlePluginPortal()
 	}
 }
+
+// Enables Gradle to auto-provision a matching JDK toolchain (e.g. Java 25)
+// when one is not already installed locally.
+plugins {
+	id 'org.gradle.toolchains.foojay-resolver-convention' version '1.0.0'
+}
