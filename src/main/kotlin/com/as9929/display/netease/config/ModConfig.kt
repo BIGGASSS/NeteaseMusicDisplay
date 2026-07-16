@@ -16,7 +16,7 @@ data class ModConfig(
     val colorHex: String = "#FFFF00",  // Yellow default (matches hardcoded color)
     val maxBoxWidth: Int = 200,   // Matches hardcoded maxBoxWidth
     val scale: Float = 1.0f,      // Matches hardcoded scale
-    val linuxMprisProcessKeyword: String = "electron"
+    val linuxMprisProcessKeyword: String = "open-orpheus"
 ) {
     companion object {
         const val DEFAULT_X = -1
@@ -24,7 +24,7 @@ data class ModConfig(
         const val DEFAULT_COLOR = "#FFFF00"
         const val DEFAULT_MAX_WIDTH = 200
         const val DEFAULT_SCALE = 1.0f
-        const val DEFAULT_LINUX_MPRIS_KEYWORD = "electron"
+        const val DEFAULT_LINUX_MPRIS_KEYWORD = "open-orpheus"
 
         /** Opaque yellow (ARGB), used when the configured color cannot be parsed. */
         val FALLBACK_COLOR: Int = 0xFFFFFF00.toInt()

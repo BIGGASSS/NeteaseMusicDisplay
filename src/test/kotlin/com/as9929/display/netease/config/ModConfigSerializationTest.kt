@@ -18,7 +18,7 @@ class ModConfigSerializationTest {
     fun loadsDefaultLinuxKeywordWhenMissingInConfig() {
         val config = json.decodeFromString<ModConfig>("{}")
 
-        assertEquals("electron", config.linuxMprisProcessKeyword)
+        assertEquals("open-orpheus", config.linuxMprisProcessKeyword)
     }
 
     @Test

@@ -17,4 +17,4 @@ A Minecraft Fabric mod that displays the current playing song in Netease Music o
 - `/nmd toggle` - Enable/disable display
 - `/nmd reset` - Reset to defaults
 - `/nmd status` - Show current settings
-- `/nmd mpris keyword <value>` - Set Linux MPRIS process keyword (default: `electron`)
+- `/nmd mpris keyword <value>` - Set Linux MPRIS process keyword (default: `open-orpheus`)
